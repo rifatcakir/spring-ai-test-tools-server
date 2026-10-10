@@ -50,5 +50,12 @@ jobs:
           distribution: temurin
           java-version: "21"
           cache: maven
+      # The image is built with docker build (BuildKit) and handed to the test, because
+      # Testcontainers' legacy-API build of this multi-stage Dockerfile fails on the hosted
+      # runners' Docker Engine ("layer does not exist"). Locally the test builds it itself.
+      - name: Build the server jar and image
+        run: |
+          mvn --batch-mode --no-transfer-progress -pl spring-ai-test-tools-server package -DskipTests
+          docker build -t cassette-server-it:ci spring-ai-test-tools-server
       - name: mvn -Pintegration-test verify
-        run: mvn --batch-mode --no-transfer-progress -Pintegration-test verify
+        run: mvn --batch-mode --no-transfer-progress -Pintegration-test verify -Dcassette.server.image=cassette-server-it:ci

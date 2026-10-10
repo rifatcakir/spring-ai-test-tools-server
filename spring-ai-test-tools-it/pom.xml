@@ -38,6 +38,7 @@
         <!-- Same pin and reason as the library's pom: the BOM-managed 2.0.2 is not a
              published artifact. -->
         <testcontainers.version>1.21.3</testcontainers.version>
+        <cassette.server.image></cassette.server.image>
     </properties>
 
     <dependencyManagement>
@@ -141,6 +142,12 @@
                                 <include>**/*Tests.java</include>
                             </includes>
                             <groups>integration</groups>
+                            <!-- A server image built beforehand with docker build; empty means
+                                 build it from the Dockerfile inside the test. See
+                                 CassetteServerEndToEndTests#serverContainer. -->
+                            <systemPropertyVariables>
+                                <cassette.server.image>${cassette.server.image}</cassette.server.image>
+                            </systemPropertyVariables>
                         </configuration>
                         <executions>
                             <execution>

@@ -141,12 +141,7 @@ class CassetteServerEndToEndTests {
 	@BeforeAll
 	void startContainers() throws Exception {
 		assumeTrue(dockerIsAvailable(), "Docker is not available — skipping the Cassette Server end-to-end test");
-		assertThat(serverJarExists()).as("the server jar must be packaged first; run `mvn -Pintegration-test verify` "
-				+ "from the repository root, which packages spring-ai-test-tools-server before this module")
-			.isTrue();
-
-		this.server = new GenericContainer<>(new ImageFromDockerfile("spring-ai-test-tools-server-it", true)
-			.withDockerfile(SERVER_MODULE.resolve("Dockerfile")))
+		this.server = serverContainer()
 			.withExposedPorts(9090)
 			.withEnv("CASSETTE_ADMIN_TOKEN", ADMIN_TOKEN)
 			.waitingFor(Wait.forHttp("/actuator/health").forPort(9090).forStatusCode(200))
@@ -174,6 +169,28 @@ class CassetteServerEndToEndTests {
 			this.ollama.commitToImage(OLLAMA_BAKED_IMAGE);
 		}
 		ollamaEndpoint = this.ollama.getEndpoint();
+	}
+
+	/**
+	 * The server image: one built beforehand with {@code docker build} when {@code
+	 * cassette.server.image} names it (CI does this), otherwise built here from the server's
+	 * real Dockerfile.
+	 *
+	 * <p>Why both: Testcontainers builds through Docker's legacy build API, and on the Docker
+	 * Engine of GitHub's hosted runners a multi-stage build that way fails with "failed to
+	 * export image ... layer does not exist". {@code docker build} (BuildKit) builds the same
+	 * Dockerfile fine, and is how the release image is built anyway.
+	 */
+	private static GenericContainer<?> serverContainer() throws IOException {
+		String prebuilt = System.getProperty("cassette.server.image", "");
+		if (!prebuilt.isBlank()) {
+			return new GenericContainer<>(DockerImageName.parse(prebuilt));
+		}
+		assertThat(serverJarExists()).as("the server jar must be packaged first; run `mvn -Pintegration-test verify` "
+				+ "from the repository root, which packages spring-ai-test-tools-server before this module")
+			.isTrue();
+		return new GenericContainer<>(new ImageFromDockerfile("spring-ai-test-tools-server-it", true)
+			.withDockerfile(SERVER_MODULE.resolve("Dockerfile")));
 	}
 
 	@AfterAll
