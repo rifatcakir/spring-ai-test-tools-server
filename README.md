@@ -113,7 +113,7 @@ A five-minute walkthrough with no API key and no model to install:
 | [Troubleshooting](docs/troubleshooting.md) | Each error message, what causes it, and the fix |
 
 Versioning: use the **same server version as the library** (server 0.2.0 with library 0.2.0).
-See the [CHANGELOG](CHANGELOG.md).
+See the [CHANGELOG](CHANGELOG.md). Maintainers: [releasing](docs/RELEASING.md).
 
 ## This repository
 
