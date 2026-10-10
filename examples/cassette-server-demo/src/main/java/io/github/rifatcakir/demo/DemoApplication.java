@@ -29,7 +29,7 @@ public class DemoApplication {
 		if (!ClassUtils.isPresent("io.github.rifatcakir.springai.testtools.recorder.remote.CassetteServerClient",
 				null)) {
 			System.err.println("This spring-ai-test-tools jar has no remote store. Build the demo together with the "
-					+ "library: mvn -pl examples/cassette-server-demo -am package -DskipTests");
+					+ "library 0.2.0 or later");
 			System.exit(1);
 		}
 		SpringApplication.run(DemoApplication.class, args);

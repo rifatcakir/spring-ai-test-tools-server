@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        Build aggregator only: never a parent, never deployed. The server ships as a jar on
+        GitHub Releases and as an image on ghcr.io; the end-to-end tests and the demo use the
+        published library (io.github.rifatcakir:spring-ai-test-tools) from Maven Central.
+    -->
+    <groupId>io.github.rifatcakir</groupId>
+    <artifactId>spring-ai-test-tools-server-build</artifactId>
+    <version>0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>spring-ai-test-tools-server (build aggregator)</name>
+
+    <properties>
+        <maven.deploy.skip>true</maven.deploy.skip>
+        <maven.install.skip>true</maven.install.skip>
+    </properties>
+
+    <modules>
+        <module>spring-ai-test-tools-server</module>
+        <!-- After the server: its end-to-end tests need the server jar. -->
+        <module>spring-ai-test-tools-it</module>
+        <!-- A runnable example; see its README. Nothing in it is deployed. -->
+        <module>examples/cassette-server-demo</module>
+    </modules>
+</project>

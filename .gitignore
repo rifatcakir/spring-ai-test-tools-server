@@ -1,0 +1,9 @@
+target/
+.idea/
+*.iml
+.vscode/
+*.log
+.DS_Store
+
+# Default storage directory of a Cassette Server started from the repository root.
+cassettes/

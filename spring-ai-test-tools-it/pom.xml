@@ -9,9 +9,9 @@
         (docs/SERVER-PRD.md section 8): the server image built from its own Dockerfile, a
         Spring context with store=remote, and a real Ollama model, all via Testcontainers.
 
-        A module of its own so neither shipped module depends on the other: the server
-        stays free of Spring AI and of the library, and the library stays free of the
-        server. Never installed, never deployed.
+        A module of its own so the server stays free of Spring AI and of the library. The
+        library is the published artifact from Maven Central, exactly as users get it.
+        Never installed, never deployed.
 
         Runs only with the integration-test profile and only in the integration-test phase
         (failsafe), because it needs the server's packaged jar:

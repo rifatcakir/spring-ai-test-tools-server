@@ -1,7 +1,7 @@
 # Cassette Server image: the same executable jar, unpacked into Spring Boot's layers so a
 # rebuild after a code change only replaces the small application layer.
 #
-#   mvn -pl spring-ai-test-tools-server package -DskipTests
+#   mvn -pl spring-ai-test-tools-server package -DskipTests   (from the repository root)
 #   docker build -t spring-ai-test-tools-server spring-ai-test-tools-server
 #   docker run -p 9090:9090 -v cassettes:/data/cassettes \
 #     -e CASSETTE_ADMIN_TOKEN=change-me spring-ai-test-tools-server
@@ -20,7 +20,7 @@ RUN java -Djarmode=tools -jar app.jar extract --layers --launcher --destination 
 
 FROM eclipse-temurin:21-jre
 # Links the ghcr.io package to its source repository on GitHub.
-LABEL org.opencontainers.image.source="https://github.com/rifatcakir/spring-ai-test-tools" \
+LABEL org.opencontainers.image.source="https://github.com/rifatcakir/spring-ai-test-tools-server" \
       org.opencontainers.image.description="Cassette Server: shared fixture store for spring-ai-test-tools" \
       org.opencontainers.image.licenses="Apache-2.0"
 RUN groupadd --system cassette \

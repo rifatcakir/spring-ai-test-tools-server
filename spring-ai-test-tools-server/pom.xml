@@ -13,8 +13,8 @@
 
         Deliberately no dependency on spring-ai-test-tools and none on Spring AI: the
         server treats fixtures as JSON documents and checks only schemaVersion, hash and
-        kind (PRD fork d). The fixture-contract/ directory at the repository root is what
-        keeps the two sides in step, tested from both modules.
+        kind (PRD fork d). fixture-contract/ at the repository root holds fixtures written by
+        the library, which the server's FixtureContractTests must accept byte for byte.
     -->
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -30,7 +30,7 @@
 
     <name>spring-ai-test-tools-server</name>
     <description>Cassette Server: a standalone fixture store for spring-ai-test-tools' remote store.</description>
-    <url>https://github.com/rifatcakir/spring-ai-test-tools</url>
+    <url>https://github.com/rifatcakir/spring-ai-test-tools-server</url>
 
     <licenses>
         <license>

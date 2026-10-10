@@ -49,7 +49,7 @@
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-autoconfigure-model-tool</artifactId>
         </dependency>
-        <!-- The library. Built from this repository, so it has the remote store. -->
+        <!-- The library from Maven Central; 0.2.0 is the first version with the remote store. -->
         <dependency>
             <groupId>io.github.rifatcakir</groupId>
             <artifactId>spring-ai-test-tools</artifactId>

@@ -21,7 +21,7 @@ import tools.jackson.databind.JsonNode;
  * server cannot know what a future format means, and a loud {@code 400} that says
  * "upgrade the server" is better than silently storing something it then mislabels in
  * listings and exports. {@code fixture-contract/schema-versions.properties} at the
- * repository root pins these numbers, and both modules test against it.
+ * repository root pins these numbers (a copy of the library's own), tested here and in the library.
  *
  * @author Rifat Cakir
  */

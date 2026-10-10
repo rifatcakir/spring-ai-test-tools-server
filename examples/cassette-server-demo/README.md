@@ -1,7 +1,7 @@
 # Cassette Server demo
 
 The smallest application that records and replays its AI calls through a
-[Cassette Server](../../spring-ai-test-tools-server/README.md). No API key, no Ollama: the
+[Cassette Server](../../README.md). No API key, no Ollama: the
 "model" is a stand-in that stamps the current time into its answer, so you can see whether an
 answer came from the model or from the server.
 
@@ -24,17 +24,15 @@ just asks a question through `ChatClient`. It knows nothing about the server.
 
 ## Try it
 
-From the repository root, build the server and the demo together with the library:
+From the repository root, build the server and the demo (the library comes from Maven
+Central):
 
 ```bash
-mvn -pl spring-ai-test-tools-server,examples/cassette-server-demo -am clean package -DskipTests
+mvn -pl spring-ai-test-tools-server,examples/cassette-server-demo clean package -DskipTests
 ```
 
-`-am` builds the library (0.2.0, the first version with the remote store) in the same run;
-until 0.2.0 is on Maven Central, the demo cannot find it otherwise. `clean` matters because a
-fat jar built earlier keeps whatever library it was first packaged with. If the demo ever runs
-against an older library (0.1.x has no remote store and would quietly write local files), it
-refuses to start and says so.
+If the demo ever runs against a library older than 0.2.0 (0.1.x has no remote store and would
+quietly write local files), it refuses to start and says so.
 
 **1. Start the server** (one terminal):
 
