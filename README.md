@@ -1,191 +1,145 @@
 # Cassette Server
 
 [![CI](https://github.com/rifatcakir/spring-ai-test-tools-server/actions/workflows/ci.yml/badge.svg)](https://github.com/rifatcakir/spring-ai-test-tools-server/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/rifatcakir/spring-ai-test-tools-server)](https://github.com/rifatcakir/spring-ai-test-tools-server/releases)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
-A standalone fixture store for [spring-ai-test-tools](https://github.com/rifatcakir/spring-ai-test-tools). Applications in a shared
-test environment keep recording and replaying their Spring AI calls exactly as they do in unit
-tests, but the fixtures live on this server instead of in each application's
-`src/test/resources`.
+**One shared store of recorded AI answers for a whole test environment.**
+
+[spring-ai-test-tools](https://github.com/rifatcakir/spring-ai-test-tools) records a Spring AI
+application's model calls once and replays them afterwards: deterministic tests, no tokens, no
+model needed. By default the recordings ("fixtures") are files in the project's
+`src/test/resources`. That works for a laptop and for CI. It does not work for an application
+running in a **shared test, QA or demo environment**, which has no checked-out sources, may run
+as several instances, and whose recordings nobody can see.
+
+The Cassette Server is where those fixtures live instead. Applications keep doing all the work
+(hashing, recording, replaying, tool isolation, redaction); the server only stores the fixtures,
+for every application in the environment, by namespace.
+
+```mermaid
+flowchart LR
+    subgraph env["Shared test environment"]
+        A["order-service<br/>(library, store: remote)"]
+        B["order-service replica"]
+        C["support-bot<br/>(library, store: remote)"]
+    end
+    A -- "GET / PUT fixtures" --> S[("Cassette Server<br/>namespaces: order-service, support-bot")]
+    B -- "GET / PUT fixtures" --> S
+    C -- "GET / PUT fixtures" --> S
+    A -. "only on a miss" .-> M["Model provider"]
+    C -. "only on a miss" .-> M
+```
+
+The server **never calls a model provider** and holds no provider key. On a miss, the
+application calls its model as it always would and stores the result on the server; from then
+on every instance gets that answer from the server, with no model call.
 
 | | File store (default) | Remote store + Cassette Server |
 |---|---|---|
-| Where fixtures live | `src/test/resources/llm-cache*` | The server's storage, per namespace |
-| Who records and replays | The advisor in your application | **The same advisor in your application** |
-| Hash, fixture format | `VcrCacheKeyGenerator`, `VcrTrack` JSON | **Unchanged**: same hash, same files, byte for byte |
-| Tool isolation, streaming, embeddings | Yes | **Yes**, all four fixture kinds are stored remotely |
-| Calls a model provider | Only your application, on a miss | Only your application, on a miss. **The server never does** |
-| Turned on by | `spring.ai.test.vcr.enabled=true` | Plus `store: remote`, a URL and a namespace |
-| Typical use | Unit and CI tests | Deployed test environments, several instances or services sharing answers, e2e, QA, demos |
+| Where fixtures live | `src/test/resources/llm-cache*` | The server, per namespace |
+| Who records and replays | The application | **The same application**, unchanged |
+| Fixture format and hash | | **Identical**, byte for byte |
+| Chat, streaming, tools, embeddings | yes | **yes** |
+| Turned on by | `spring.ai.test.vcr.enabled: true` | plus `store: remote`, a URL and a namespace |
+| Typical use | unit tests, CI | deployed test environments, several services or replicas, e2e, QA, demos |
 
-The server is deliberately dumb: it stores JSON documents by (namespace, kind, hash), checks
-only that each is well formed with a matching `hash`, a known `schemaVersion` and the right
-kind, and holds each namespace's default mode. It has no Spring AI dependency and holds no
-provider key. Everything Spring AI-specific stays in the library. Design:
-[`docs/SERVER-PRD.md`](https://github.com/rifatcakir/spring-ai-test-tools/blob/main/docs/SERVER-PRD.md).
+## Quick start
 
-> **Internal test networks only.** Fixtures contain prompts and answers. Do not expose this
-> server publicly. Redaction happens in the client before anything is sent (see the library's
-> "Redacting fixture content"), and the admin API is disabled unless you give it a token.
-
-A five-minute walkthrough with no API key and no model to install:
-[`examples/cassette-server-demo`](examples/cassette-server-demo/README.md).
-
-## Run it
-
-Three ways, all the same server. **Java 21 is the only requirement**; Docker is optional.
-
-**1. The jar** (from the [GitHub Releases](https://github.com/rifatcakir/spring-ai-test-tools-server/releases)):
+**1. Run the server.** Java 21 is the only requirement; Docker is optional.
 
 ```bash
 curl -LO https://github.com/rifatcakir/spring-ai-test-tools-server/releases/download/v0.2.0/spring-ai-test-tools-server-0.2.0.jar
-java -jar spring-ai-test-tools-server-0.2.0.jar --port=9090 --storage-dir=./cassettes --admin-token=change-me
+java -jar spring-ai-test-tools-server-0.2.0.jar --admin-token=change-me
 ```
 
-**2. The container image** (`ghcr.io`):
+or
 
 ```bash
 docker run -p 9090:9090 -v cassettes:/data/cassettes \
   -e CASSETTE_ADMIN_TOKEN=change-me ghcr.io/rifatcakir/spring-ai-test-tools-server:0.2.0
 ```
 
-**3. From source** (this repository):
-
-```bash
-git clone https://github.com/rifatcakir/spring-ai-test-tools-server.git && cd spring-ai-test-tools-server
-mvn -pl spring-ai-test-tools-server package -DskipTests
-java -jar spring-ai-test-tools-server/target/spring-ai-test-tools-server-0.2.0.jar --admin-token=change-me
-```
-
-To build the image yourself instead: `docker build -t spring-ai-test-tools-server spring-ai-test-tools-server`
-after the `mvn` step ([`Dockerfile`](spring-ai-test-tools-server/Dockerfile), layered).
-
-| Flag | Environment variable | Default | Meaning |
-|---|---|---|---|
-| `--port` | `SERVER_PORT` | `9090` | HTTP port |
-| `--storage-dir` | `CASSETTE_STORAGE_DIR` | `./cassettes` (`/data/cassettes` in the image) | One directory per namespace |
-| `--admin-token` | `CASSETTE_ADMIN_TOKEN` | none: admin API disabled | Bearer token for `/__admin` |
-| `--client-token` | `CASSETTE_CLIENT_TOKEN` | none: client API open | Bearer token for `/api/v1`; per namespace with `cassette.namespace-tokens.<ns>` |
-| `--default-mode` | `CASSETTE_DEFAULT_MODE` | `RECORD_OR_REPLAY` | Mode for clients that set none, in namespaces without their own |
-
-Health check: `GET /actuator/health`. One instance per environment; it is not clustered.
-Use the same server version as the library (server 0.2.0 with library 0.2.0): the server
-refuses fixtures with a `schemaVersion` newer than it knows.
-
-## Point an application at it
-
-The library on the application's classpath, and in that environment's config:
+**2. Point an application at it.** The application needs
+`io.github.rifatcakir:spring-ai-test-tools:0.2.0` on its classpath, and this configuration. No
+code changes:
 
 ```yaml
 spring:
   ai:
     test:
       vcr:
-        enabled: true                  # still required, still off by default
-        store: remote                  # file (default) | remote
+        enabled: true
+        store: remote
         remote:
-          url: http://cassette-server:9090
-          namespace: order-service     # typically the application name
-          token: ${CASSETTE_TOKEN:}    # only if the server has a client token
-          connect-timeout: 2s
-          read-timeout: 5s
-        # mode: REPLAY_ONLY            # omit to follow the namespace's default
+          url: http://localhost:9090
+          namespace: order-service
 ```
 
-No code changes, no `base-url` rewiring: the provider configuration stays as it is. On startup
-the application logs one `WARN` line saying AI calls go through the server, so it can never be
-on unnoticed. Keep the dependency out of production artifacts (a Maven profile or Gradle
-configuration used only for test-environment builds).
-
-**If the server is down or answers `5xx`, the call fails.** It never silently calls the model
-and never falls back to local files: a shared environment that quietly starts spending tokens
-and returning fresh answers is exactly the flakiness this exists to remove.
-
-## Modes: the client decides
-
-A mode set in the application's config always wins, in either direction, and the server is
-never asked. An application that sets no mode asks the server for its namespace's default on
-every call, so an admin can switch a whole environment without a redeploy:
+**3. Use it.** The first call to a prompt goes to the model and is stored on the server; every
+later call, from any instance using that namespace, is replayed from the server.
 
 ```bash
-curl -X PUT -H "Authorization: Bearer $ADMIN" -H "Content-Type: application/json" \
-  -d '{"mode":"RECORD_ALWAYS"}' http://cassette-server:9090/__admin/namespaces/order-service/mode
-# ... re-record ...
-curl -X PUT -H "Authorization: Bearer $ADMIN" -H "Content-Type: application/json" \
-  -d '{"mode":"REPLAY_ONLY"}' http://cassette-server:9090/__admin/namespaces/order-service/mode
+curl -H "Authorization: Bearer change-me" http://localhost:9090/__admin/namespaces/order-service/fixtures
 ```
 
-## Review what was recorded
+A five-minute walkthrough with no API key and no model to install:
+[`examples/cassette-server-demo`](examples/cassette-server-demo/README.md).
 
-Fixtures recorded in an environment still belong in a pull request (they are reviewed as
-diffs). Export a namespace and unzip it into the application's test resources:
+## What you get
 
-```bash
-curl -H "Authorization: Bearer $ADMIN" -o fixtures.zip \
-  http://cassette-server:9090/__admin/namespaces/order-service/export
-unzip -o fixtures.zip -d src/test/resources
-```
+- **Shared recordings.** Replicas and services that use the same namespace share one set of
+  fixtures. Two instances that miss on the same prompt at once record it once: the server keeps
+  the first and tells the second.
+- **Mode control without redeploys.** An application that sets no mode follows its namespace's
+  default, which an admin changes at runtime: `RECORD_ALWAYS` to re-record an environment for an
+  afternoon, `REPLAY_ONLY` to seal it again. A mode set in the application always wins.
+- **Loud failures.** If the server is unreachable, the call fails. The application never quietly
+  calls the model instead, and never quietly falls back to local files.
+- **Reviewable recordings.** Export a namespace as a zip in exactly the `src/test/resources`
+  layout, unzip, commit, and review the fixtures in a pull request like any other change.
+- **Visibility.** List, inspect and delete fixtures, and see which lookups recently missed, over
+  a small admin API.
 
-The zip holds `llm-cache/`, `llm-cache-embedding/` and `llm-cache-tool/` exactly as the
-library's file store lays them out, so the same tests replay with `store: file`. The reverse
-works too: copy those directories into `{storage-dir}/{namespace}/` to seed a namespace.
+## Documentation
 
-## Storage
-
-```
-{storage-dir}/{namespace}/llm-cache/{hash}.json             chat and streaming
-{storage-dir}/{namespace}/llm-cache-embedding/{hash}.json
-{storage-dir}/{namespace}/llm-cache-tool/{hash}.json
-{storage-dir}/.cassette-server/namespace-modes.json        namespace default modes
-```
-
-Documents are stored byte for byte as the client sent them (what the library's file store
-would have written), written atomically (temp file and move), with writes to one fixture
-serialized. A file the server cannot read is treated as missing, so the next client records it
-again.
-
-## API
-
-Client API (used by the library; bearer token only if `--client-token` is set):
-
-| Method and path | Result |
+| | |
 |---|---|
-| `GET /api/v1/ns/{ns}/{kind}/{hash}` | `200` with the document, or `404` |
-| `PUT /api/v1/ns/{ns}/{kind}/{hash}` | `201` stored; `409` already exists, with the existing document; `400` if the body's `hash`, kind or `schemaVersion` is wrong |
-| `PUT …?overwrite=true` | `201` stored or `200` replaced; sent only under `RECORD_ALWAYS` |
-| `GET /api/v1/ns/{ns}/config` | `{"namespace", "mode", "source"}`: the mode for clients that set none |
+| [Getting started](docs/getting-started.md) | Install, connect an application, record and replay, seed and export a namespace |
+| [How it works](docs/how-it-works.md) | Request flow, namespaces, modes, storage, concurrency, what the server checks |
+| [Configuration](docs/configuration.md) | Every server flag and environment variable, and the application-side properties |
+| [API reference](docs/api.md) | Every endpoint, with real requests and responses |
+| [Operations](docs/operations.md) | Docker Compose, Kubernetes, health checks, backups, security, upgrades |
+| [Troubleshooting](docs/troubleshooting.md) | Each error message, what causes it, and the fix |
 
-`{kind}` is `chat`, `stream`, `embedding` or `tool`; `{hash}` is the 64-character SHA-256.
-
-Admin API (`/__admin`, admin token required):
-
-| Method and path | Purpose |
-|---|---|
-| `GET /__admin/namespaces` | Namespaces, their mode, fixture count per kind |
-| `PUT /__admin/namespaces/{ns}/mode` | Set the namespace default: `{"mode": "REPLAY_ONLY"}` |
-| `DELETE /__admin/namespaces/{ns}/mode` | Clear it; clients without a mode use the server default |
-| `GET /__admin/namespaces/{ns}/fixtures?kind=chat` | Hash, kind, recordedAt, model, first user message |
-| `GET /__admin/namespaces/{ns}/fixtures/{kind}/{hash}` | One document |
-| `DELETE /__admin/namespaces/{ns}/fixtures/{kind}/{hash}` | Remove one; the next call re-records it (or fails in `REPLAY_ONLY`) |
-| `GET /__admin/namespaces/{ns}/misses` | The last 100 `404`s, newest first, with whether each has been recorded since |
-| `GET /__admin/namespaces/{ns}/export` | Zip in the library's file layout |
+Versioning: use the **same server version as the library** (server 0.2.0 with library 0.2.0).
+See the [CHANGELOG](CHANGELOG.md).
 
 ## This repository
 
 | Directory | What |
 |---|---|
-| [`spring-ai-test-tools-server/`](spring-ai-test-tools-server) | The server: an executable Spring Boot jar, and its [`Dockerfile`](spring-ai-test-tools-server/Dockerfile). No Spring AI dependency |
-| [`spring-ai-test-tools-it/`](spring-ai-test-tools-it) | End-to-end tests: the server image, the published library with `store: remote`, and a real Ollama model |
-| [`examples/cassette-server-demo/`](examples/cassette-server-demo) | A runnable walkthrough with no API key and no model to install |
-| [`fixture-contract/`](fixture-contract) | One fixture per kind, written by the library, that the server must accept byte for byte |
+| [`spring-ai-test-tools-server/`](spring-ai-test-tools-server) | The server: a Spring Boot executable jar and its [`Dockerfile`](spring-ai-test-tools-server/Dockerfile). No Spring AI dependency |
+| [`spring-ai-test-tools-it/`](spring-ai-test-tools-it) | End-to-end tests: the server image, the published library with `store: remote`, a real Ollama model |
+| [`examples/cassette-server-demo/`](examples/cassette-server-demo) | A runnable walkthrough |
+| [`examples/docker-compose/`](examples/docker-compose) | A Compose file for a shared environment |
+| [`fixture-contract/`](fixture-contract) | Fixtures written by the library, which the server must accept byte for byte |
 
-`mvn test` runs the server's own tests. `mvn -Pintegration-test verify` also runs the
-end-to-end tests (needs Docker; the library comes from Maven Central).
+```bash
+mvn test                          # server tests
+mvn -Pintegration-test verify     # plus end to end (Docker; the library comes from Maven Central)
+```
 
-The client half (the remote store, the advisor, hashing, tool isolation, redaction) is the
-library, [`rifatcakir/spring-ai-test-tools`](https://github.com/rifatcakir/spring-ai-test-tools). Its design notes for the server are in
-[`docs/SERVER-PRD.md`](https://github.com/rifatcakir/spring-ai-test-tools/blob/main/docs/SERVER-PRD.md) there.
+More end-to-end scenarios, from an application's point of view, are in
+[spring-ai-test-tools-example](https://github.com/rifatcakir/spring-ai-test-tools-example)
+(`CassetteServerRemoteStoreTest`, `CassetteServerSharedEnvironmentTest`).
 
-## Not in this version
+The client side (the remote store, hashing, record/replay) is the library,
+[rifatcakir/spring-ai-test-tools](https://github.com/rifatcakir/spring-ai-test-tools). The
+design notes are its [`docs/SERVER-PRD.md`](https://github.com/rifatcakir/spring-ai-test-tools/blob/main/docs/SERVER-PRD.md).
 
-No web UI, no clustering or high availability, no TTL, no fuzzy matching, no proxying of model
-traffic, no built-in Git sync. See the PRD's later phases.
+> **Internal test networks only.** Fixtures contain prompts and answers. Do not expose this server
+> to the internet. Redaction happens in the application before anything is sent; see
+> [Operations: security](docs/operations.md#security).
+
+Apache-2.0.

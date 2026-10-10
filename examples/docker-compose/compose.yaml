@@ -1,0 +1,30 @@
+# A Cassette Server for a shared test environment.
+#
+#   CASSETTE_ADMIN_TOKEN=change-me docker compose up -d
+#
+# Fixtures live in the named volume "cassettes" and survive restarts and upgrades.
+# Point applications at http://<this host>:9090 with spring.ai.test.vcr.store=remote.
+services:
+  cassette-server:
+    image: ghcr.io/rifatcakir/spring-ai-test-tools-server:0.2.0
+    ports:
+      - "9090:9090"
+    environment:
+      # Required for the admin API (listing, deleting, export, namespace modes).
+      CASSETTE_ADMIN_TOKEN: ${CASSETTE_ADMIN_TOKEN:?set CASSETTE_ADMIN_TOKEN}
+      # Optional: require a bearer token from applications too.
+      # CASSETTE_CLIENT_TOKEN: ${CASSETTE_CLIENT_TOKEN}
+      # Optional: what applications without their own mode follow.
+      # CASSETTE_DEFAULT_MODE: REPLAY_ONLY
+    volumes:
+      - cassettes:/data/cassettes
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9090/actuator/health/readiness"]
+      interval: 10s
+      timeout: 3s
+      start_period: 30s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  cassettes:
