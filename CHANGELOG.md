@@ -3,6 +3,23 @@
 The Cassette Server. Released with the same version as the library it serves,
 [`io.github.rifatcakir:spring-ai-test-tools`](https://github.com/rifatcakir/spring-ai-test-tools), and meant to be used with that version.
 
+## [Unreleased]
+
+### Fixed
+
+- The short command-line flags (`--port`, `--storage-dir`, `--admin-token`, `--client-token`,
+  `--default-mode`) now beat environment variables, as command-line arguments do in Spring Boot.
+  In 0.2.0 they only filled placeholders in `application.properties`, so an environment variable
+  for the same setting won; in the Docker image, which sets `CASSETTE_STORAGE_DIR`,
+  `docker run ... --storage-dir=...` was ignored. Workaround for 0.2.0: the environment variable,
+  or the full property name (`--cassette.storage-dir=...`).
+
+### Documentation
+
+- `docs/`: getting started, how it works, configuration, API reference (every response captured
+  from a running server), operations (Compose, Kubernetes, backups, security, upgrades) and
+  troubleshooting. `examples/docker-compose/compose.yaml`.
+
 ## [0.2.0] - 2026-10-10
 
 First release, built in the library repository and moved here afterwards (with its history).

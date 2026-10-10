@@ -10,15 +10,15 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Token enforcement on both APIs. The flags are passed as command-line arguments, exactly
- * as {@code java -jar … --admin-token=… --client-token=…} would, so the mapping in {@code
- * application.properties} is tested along with the checks.
+ * Token enforcement on both APIs. The tokens are passed as command-line properties; the short
+ * flags ({@code --admin-token=…}) that {@code java -jar} users type are rewritten to these in
+ * {@code CassetteServerApplication#main}, tested in {@link CommandLineFlagsTests}.
  */
 class AccessTokenTests {
 
 	@Nested
 	@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-			args = { "--storage-dir=target/test-cassettes/access-tokens", "--admin-token=admin-secret", "--client-token=client-secret",
+			args = { "--cassette.storage-dir=target/test-cassettes/access-tokens", "--cassette.admin-token=admin-secret", "--cassette.client-token=client-secret",
 					"--cassette.namespace-tokens.billing=billing-secret" })
 	class WithTokens {
 
@@ -76,7 +76,7 @@ class AccessTokenTests {
 
 	@Nested
 	@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-			args = "--storage-dir=target/test-cassettes/no-admin-token")
+			args = "--cassette.storage-dir=target/test-cassettes/no-admin-token")
 	class WithoutAnAdminToken {
 
 		@LocalServerPort

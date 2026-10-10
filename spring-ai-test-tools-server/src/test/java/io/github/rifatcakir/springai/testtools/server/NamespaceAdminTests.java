@@ -27,7 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Step 6 over real HTTP: namespace default mode, the misses log and the export.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, args = "--admin-token=admin-secret")
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, args = "--cassette.admin-token=admin-secret")
 class NamespaceAdminTests {
 
 	@TempDir

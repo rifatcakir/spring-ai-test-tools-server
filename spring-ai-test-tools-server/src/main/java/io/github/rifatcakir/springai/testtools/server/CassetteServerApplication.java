@@ -1,5 +1,7 @@
 package io.github.rifatcakir.springai.testtools.server;
 
+import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tools.jackson.databind.json.JsonMapper;
@@ -39,7 +41,35 @@ public class CassetteServerApplication implements WebMvcConfigurer {
 	}
 
 	public static void main(String[] args) {
-		SpringApplication.run(CassetteServerApplication.class, args);
+		SpringApplication.run(CassetteServerApplication.class, expandShortFlags(args));
+	}
+
+	/**
+	 * The short flags this server documents, and the properties they set.
+	 */
+	private static final Map<String, String> SHORT_FLAGS = Map.of("--port=", "--server.port=", "--storage-dir=",
+			"--cassette.storage-dir=", "--admin-token=", "--cassette.admin-token=", "--client-token=",
+			"--cassette.client-token=", "--default-mode=", "--cassette.default-mode=");
+
+	/**
+	 * Rewrites {@code --storage-dir=...} and the other short flags to the properties they mean,
+	 * so they are command-line properties and beat environment variables, as every command-line
+	 * argument does in Spring Boot. Mapping them through placeholders in {@code
+	 * application.properties} instead (as 0.2.0 did) ranks them below environment variables:
+	 * in the Docker image, which sets {@code CASSETTE_STORAGE_DIR}, {@code --storage-dir} was
+	 * silently ignored. Every other argument passes through unchanged.
+	 */
+	static String[] expandShortFlags(String[] args) {
+		String[] expanded = new String[args.length];
+		for (int i = 0; i < args.length; i++) {
+			expanded[i] = args[i];
+			for (Map.Entry<String, String> flag : SHORT_FLAGS.entrySet()) {
+				if (args[i].startsWith(flag.getKey())) {
+					expanded[i] = flag.getValue() + args[i].substring(flag.getKey().length());
+				}
+			}
+		}
+		return expanded;
 	}
 
 	@Bean
