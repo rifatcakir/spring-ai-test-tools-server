@@ -17,3 +17,8 @@ First release, built in the library repository and moved here afterwards (with i
 - Storage in the library's own layout, byte for byte, with atomic and per-fixture serialized
   writes; an unreadable file is treated as missing.
 - Optional bearer token for the client API, globally or per namespace. `/actuator/health`.
+
+The `0.2.0` image was re-pushed on 2026-10-10, a few hours after the first push, from the same
+jar: the first push inherited the base image's Ubuntu labels (title, description, version),
+which the ghcr.io page showed as this image's. Only the labels changed; the old digest
+`sha256:fa8d30cf…` is still in the registry, untagged.

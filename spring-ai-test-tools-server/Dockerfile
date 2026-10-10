@@ -19,10 +19,22 @@ RUN set -e; count=$(ls jars/*.jar | wc -l);     if [ "$count" -ne 1 ]; then     
 RUN java -Djarmode=tools -jar app.jar extract --layers --launcher --destination extracted
 
 FROM eclipse-temurin:21-jre
-# Links the ghcr.io package to its source repository on GitHub.
-LABEL org.opencontainers.image.source="https://github.com/rifatcakir/spring-ai-test-tools-server" \
-      org.opencontainers.image.description="Cassette Server: shared fixture store for spring-ai-test-tools" \
-      org.opencontainers.image.licenses="Apache-2.0"
+# Every OCI label is set here on purpose: the base image carries Ubuntu's own title,
+# description and version, and any label not overridden shows up on the ghcr.io package
+# page as if it described this image (0.2.0 was first pushed that way). The version and
+# build time come from the release command:
+#   docker build --build-arg VERSION=0.2.0 --build-arg CREATED=$(date -u +%Y-%m-%dT%H:%M:%SZ) ...
+ARG VERSION=dev
+ARG CREATED=unknown
+LABEL org.opencontainers.image.title="Cassette Server" \
+      org.opencontainers.image.description="Shared record/replay fixture store for spring-ai-test-tools (Spring AI). Java 21; the same server as the jar on GitHub Releases." \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.created="${CREATED}" \
+      org.opencontainers.image.source="https://github.com/rifatcakir/spring-ai-test-tools-server" \
+      org.opencontainers.image.url="https://github.com/rifatcakir/spring-ai-test-tools-server" \
+      org.opencontainers.image.documentation="https://github.com/rifatcakir/spring-ai-test-tools-server#readme" \
+      org.opencontainers.image.licenses="Apache-2.0" \
+      org.opencontainers.image.vendor="rifatcakir"
 RUN groupadd --system cassette \
     && useradd --system --gid cassette --uid 10001 --no-create-home cassette \
     && mkdir -p /data/cassettes \

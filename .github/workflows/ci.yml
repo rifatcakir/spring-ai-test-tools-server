@@ -56,6 +56,6 @@ jobs:
       - name: Build the server jar and image
         run: |
           mvn --batch-mode --no-transfer-progress -pl spring-ai-test-tools-server package -DskipTests
-          docker build -t cassette-server-it:ci spring-ai-test-tools-server
+          docker build --build-arg VERSION=ci -t cassette-server-it:ci spring-ai-test-tools-server
       - name: mvn -Pintegration-test verify
         run: mvn --batch-mode --no-transfer-progress -Pintegration-test verify -Dcassette.server.image=cassette-server-it:ci
